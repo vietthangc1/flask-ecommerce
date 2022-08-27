@@ -19,7 +19,7 @@ from werkzeug.utils import secure_filename
 import os
 
 from ecom.forms import EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
-from .modules import get_num_cart_item, refresh_cate_tree, save_user_to_session
+from .modules import get_current_time, refresh_cate_tree, update_information
 from bson.objectid import ObjectId
 import locale
 from .models import login_required
@@ -33,11 +33,11 @@ pages = Blueprint(
 @pages.route("/", methods = ["GET", "POST"])
 def index():
     refresh_cate_tree()
-    num_cart_item = get_num_cart_item()
+    meta = update_information()
     return render_template(
         "index.html",
         cate_tree = session.get("cate_tree"),
-        num_cart_item = num_cart_item
+        num_cart_item = meta['num_cart_item']
         )
 
 @pages.route("/category")
@@ -50,22 +50,45 @@ def category_listing(cate):
         cate_tree = session.get("cate_tree"),
         )
 
-@pages.route("/sub_category/<string:cate>")
+@pages.route("/sub_category/<string:cate>", methods = ['GET', 'POST'])
 def sub_category_listing(cate):
     refresh_cate_tree()
-    num_cart_item = get_num_cart_item()
+    meta = update_information()
     list_product = list(current_app.db.product.find({"sub_cate_report": cate}))
+
+    if request.method == "POST":
+        if session.get("email") == None:
+            return redirect(url_for('pages.login'))
+
+        dic = dict(
+            product_id = str(request.form.get("btn")),
+            quantity = 1
+        )
+
+        current_user = meta["current_user"]
+        lst_cart = current_user["cart_items"]
+
+        lst_product_id_in_cart = [item["product_id"] for item in lst_cart]
+        if dic["product_id"] not in lst_product_id_in_cart:
+            lst_cart.append(dic)
+        else:
+            for product in lst_cart:
+                if product["product_id"] == dic["product_id"]:
+                    product["quantity"] += dic["quantity"]
+
+        current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": lst_cart}})
+        return redirect(request.path)
 
     return render_template(
         "shop.html",
         cate_tree = session.get("cate_tree"),
         list_product = list_product,
-        num_cart_item = num_cart_item
+        num_cart_item = meta["num_cart_item"]
         )
 
 @pages.route("/product/<string:_id>", methods = ['GET','POST'])
 def product_detail(_id):
-    num_cart_item = get_num_cart_item()
+    meta = update_information()
     product = list(current_app.db.product.find({"_id": ObjectId(_id)}))[0]
     enu_imgs = enumerate(product.get("img_srcs"))
     product["description"] = product.get("description").replace("height", "")
@@ -74,12 +97,15 @@ def product_detail(_id):
     form = PDPtoATCForm()
 
     if form.validate_on_submit():
+        if session.get("email") == None:
+            return redirect(url_for('pages.login'))
+
         dic = dict(
             product_id = _id,
             quantity = form.quantity.data
         )
 
-        current_user = session.get("current_user")
+        current_user = meta["current_user"]
         lst_cart = current_user["cart_items"]
 
         lst_product_id_in_cart = [item["product_id"] for item in lst_cart]
@@ -91,23 +117,21 @@ def product_detail(_id):
                     product["quantity"] += dic["quantity"]
 
         current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": lst_cart}})
-        save_user_to_session()
-        print("added ",dic["quantity"])
         return redirect(request.path)
 
     return render_template(
         "detail.html",
         product = product,
         enu_imgs = enu_imgs,
-        num_cart_item = num_cart_item,
+        num_cart_item = meta["num_cart_item"],
         form = form
     )
 
 @pages.route("/cart", methods = ['GET', 'POST'])
 @login_required
 def cart():
-    lst_cart = session.get("current_user").get("cart_items")
-    num_cart_item = len(lst_cart)
+    meta = update_information()
+    lst_cart = meta["current_user"].get("cart_items")
     product_dictionary = {}
     list_products = list(current_app.db.product.find({}))
     for product in list_products:
@@ -156,7 +180,6 @@ def cart():
                 }
             }
         )
-        save_user_to_session()
 
         return redirect(url_for("pages.cart"))
 
@@ -164,14 +187,14 @@ def cart():
     return render_template(
         "cart.html",
         list_product = lst_cart,
-        num_cart_item = num_cart_item
+        num_cart_item = meta["num_cart_item"]
         )
 
 @pages.route("/checkout")
 @login_required
 def checkout():
-    lst_cart = session.get("current_user").get("cart_items")
-    num_cart_item = len(lst_cart)
+    meta = update_information()
+    lst_cart = meta["current_user"].get("cart_items")
     product_dictionary = {}
     list_products = list(current_app.db.product.find({}))
     for product in list_products:
@@ -198,14 +221,18 @@ def checkout():
     return render_template(
         "checkout.html",
         list_product = lst_cart,
-        num_cart_item = num_cart_item,
+        num_cart_item = meta["num_cart_item"],
         total_order_value = total_order_value
     )
 
-@pages.route("/order")
+@pages.route("/order_success")
 @login_required
 def order():
-    lst_cart = session.get("current_user").get("cart_items")
+    meta = update_information()
+    lst_cart = meta["current_user"].get("cart_items")
+    if len(lst_cart) == 0:
+        return redirect(url_for('pages.index'))
+
     product_dictionary = {}
     list_products = list(current_app.db.product.find({}))
     for product in list_products:
@@ -233,16 +260,46 @@ def order():
     current_app.db.orders.insert_one({
         "_id": order_id,
         "items": lst_cart,
-        "value": total_order_value
+        "value": total_order_value,
+        "order_time": get_current_time()
     })
 
     current_app.db.users.update_one({"email": session.get("email")}, {"$push": {"orders": order_id}})
     current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": []}})
-    save_user_to_session()
 
     return render_template(
         "orders.html",
         num_cart_item = 0,
+    )
+
+@pages.route("/orders")
+@login_required
+def orders_listing():
+    meta = update_information()
+    lst_cart = meta["current_user"].get("cart_items")
+
+    product_dictionary = {}
+    lst_order_id = meta["current_user"].get("orders")
+    list_products = list(current_app.db.product.find({}))
+
+    for product in list_products:
+        img = product.get("img_srcs")
+        if len(img) == 0:
+            img = ""
+        else:
+            img = product.get("img_srcs")[0]
+        product_dictionary[product["_id"]] = {
+            "product_name": product["product_name"],
+            "price": product["price"],
+            "img_src": img
+        }
+    
+    orders = list(current_app.db.orders.find({"_id": {"$in": lst_order_id}}))
+
+    return render_template(
+        "orders_listing.html",
+        num_cart_item = len(lst_cart),
+        orders = orders
     )
 
 @pages.route("/register", methods = ['GET','POST'])
@@ -288,7 +345,6 @@ def login():
         if len(user) > 0:
             if pbkdf2_sha256.verify(login_dic['password'], user[0]['password']):
                 session['email'] = login_dic['email']
-                save_user_to_session()
                 return redirect(request.path)
         flash("Wrong email or password!", "danger")
     return render_template('login.html', th_form = form, title="Log in")

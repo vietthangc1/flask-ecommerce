@@ -7161,6 +7161,11 @@ button.bg-dark:focus {
   }
 }
 
+.order_area {
+  display: flex;
+  align-items: center;
+}
+
 .user-select-all {
   user-select: all !important;
 }

@@ -5,10 +5,14 @@
 {% block main_content %}
 
    <div class="container">
-    {% if list_product|length > 0 %}
     <form action="" method="post">
-        {% for product in list_product %}
+        {% for order in orders %}
         <div class="product-div">
+            <div class="row">
+                <div class="col-6">Order_id: {{ order["_id"] }}</div>
+                <div class="col-6">Order_time: {{ order["order_time"] }}</div>                
+            </div>
+            {% for product in order["items"] %}
             <div class="row order_area">
                 <div class="col-3">
                     <img class="w-20 h-20" src="{{ url_for('static', filename = 'img/product_img/'+ product['img_src'] ) }}"alt="">
@@ -18,23 +22,22 @@
                         <a href="{{ url_for('pages.product_detail', _id = product['product_id']) }}">{{ product['product_name'] | truncate(100) }}</a>
                     </div>
                     <div class="row">
-                        Quantity: {{ render_number_field(product["form"].quantity) }}
+                        Quantity: {{ product['quantity'] }}
                     </div>
                     <div class="row">
-                        Price: {{ product['price'] }}
+                        Price per one item: {{ product['price'] }} đ
                     </div>
                     <div class="row">
-                        {{ product["form"].submit(class_="btn btn-primary px-3") }}
+                        Value for this product: {{ product['total_value'] }} đ
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
+        Total order value: {{ order["value"] }} đ
+        <hr>
         {% endfor %}
     </form>
-    <button class="btn btn-primary"><a href="{{ url_for('pages.checkout') }}">Checkout</a></button>
-    {% else %}
-    <p>No items in cart! Shop now!</p> 
-    {% endif %}
     <script>
     </script>
    </div>

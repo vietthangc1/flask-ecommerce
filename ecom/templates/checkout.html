@@ -8,7 +8,7 @@
     <form action="" method="post">
         {% for product in list_product %}
         <div class="product-div">
-            <div class="row">
+            <div class="row order_area">
                 <div class="col-3">
                     <img class="w-20 h-20" src="{{ url_for('static', filename = 'img/product_img/'+ product['img_src'] ) }}"alt="">
                 </div>

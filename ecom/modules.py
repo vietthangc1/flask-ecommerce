@@ -1,4 +1,6 @@
 from flask import current_app, session
+from datetime import date, datetime
+import pytz
 
 def refresh_cate_tree():
   if session.get("cate_tree") == None:
@@ -34,3 +36,22 @@ def get_num_cart_item():
         else:
             num_cart_item = len(cart)    
     return num_cart_item
+
+def get_current_time():
+    return datetime.now(tz=pytz.timezone('Asia/Bangkok'))
+
+def update_information():
+    if session.get("email") == None:
+        num_cart_item = 0
+        current_user = {}
+    else:
+        current_user = list(current_app.db.users.find({"email": session.get("email")}))[0]
+        cart = current_user.get("cart_items")
+        if cart == None:
+            num_cart_item = 0
+        else:
+            num_cart_item = len(cart)  
+    return {
+        'current_user': current_user,
+        'num_cart_item': num_cart_item
+    }
