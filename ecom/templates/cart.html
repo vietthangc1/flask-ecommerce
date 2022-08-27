@@ -1,0 +1,42 @@
+{% from "macros/fields.html" import render_number_field %}
+
+{% extends "layout.html" %}
+
+{% block main_content %}
+
+   <div class="container">
+    {% if list_product|length > 0 %}
+    <form action="" method="post">
+        {% for product in list_product %}
+        <div class="product-div">
+            <div class="row">
+                <div class="col-3">
+                    <img class="w-20 h-20" src="{{ url_for('static', filename = 'img/product_img/'+ product['img_src'] ) }}"alt="">
+                </div>
+                <div class="col-9">
+                    <div class="row">
+                        <a href="{{ url_for('pages.product_detail', _id = product['product_id']) }}">{{ product['product_name'] | truncate(100) }}</a>
+                    </div>
+                    <div class="row">
+                        Quantity: {{ render_number_field(product["form"].quantity) }}
+                    </div>
+                    <div class="row">
+                        Price: {{ product['price'] }}
+                    </div>
+                    <div class="row">
+                        {{ product["form"].submit(class_="btn btn-primary px-3") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </form>
+    <button class="btn btn-primary"><a href="{{ url_for('pages.checkout') }}">Checkout</a></button>
+    {% else %}
+    <p>No items in cart! Shop now!</p> 
+    {% endif %}
+    <script>
+    </script>
+   </div>
+
+{% endblock %}
