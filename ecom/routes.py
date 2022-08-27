@@ -19,8 +19,7 @@ from werkzeug.utils import secure_filename
 import os
 
 from ecom.forms import EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
-from .modules import get_current_time, refresh_cate_tree, update_information
-from bson.objectid import ObjectId
+from .modules import get_current_time, get_product_dictionary, update_information
 import locale
 from .models import login_required
 locale.setlocale(locale.LC_ALL, 'en_US')
@@ -32,56 +31,61 @@ pages = Blueprint(
 
 @pages.route("/", methods = ["GET", "POST"])
 def index():
-    refresh_cate_tree()
     meta = update_information()
     return render_template(
         "index.html",
-        cate_tree = session.get("cate_tree"),
+        cate_tree = meta.get("cate_tree"),
         num_cart_item = meta['num_cart_item']
         )
 
 @pages.route("/category")
 def category_listing(cate):
-    refresh_cate_tree()
+    meta = update_information()
     list_product = [current_app.db.product.find({"cate_report": cate})]
     print([item["product_name"] for item in list_product])
     return render_template(
         "shop.html",
-        cate_tree = session.get("cate_tree"),
+        cate_tree = meta.get("cate_tree"),
         )
 
 @pages.route("/sub_category/<string:cate>", methods = ['GET', 'POST'])
 def sub_category_listing(cate):
-    refresh_cate_tree()
     meta = update_information()
     list_product = list(current_app.db.product.find({"sub_cate_report": cate}))
 
     if request.method == "POST":
         if session.get("email") == None:
             return redirect(url_for('pages.login'))
-
-        dic = dict(
-            product_id = str(request.form.get("btn")),
-            quantity = 1
-        )
+        
+        _id = str(request.form.get("btn"))
+        product_dictionary = get_product_dictionary()
 
         current_user = meta["current_user"]
         lst_cart = current_user["cart_items"]
 
         lst_product_id_in_cart = [item["product_id"] for item in lst_cart]
-        if dic["product_id"] not in lst_product_id_in_cart:
+
+        if _id not in lst_product_id_in_cart:
+            dic = dict(
+                product_id = _id,
+                quantity = 1,
+                product_name = product_dictionary[_id]["product_name"],
+                price = product_dictionary[_id]["price"],
+                img_src =product_dictionary[_id]["img_src"]
+            )
             lst_cart.append(dic)
+
         else:
             for product in lst_cart:
-                if product["product_id"] == dic["product_id"]:
-                    product["quantity"] += dic["quantity"]
+                if product["product_id"] == _id:
+                    product["quantity"] += 1
 
         current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": lst_cart}})
         return redirect(request.path)
 
     return render_template(
         "shop.html",
-        cate_tree = session.get("cate_tree"),
+        cate_tree = meta.get("cate_tree"),
         list_product = list_product,
         num_cart_item = meta["num_cart_item"]
         )
@@ -89,7 +93,7 @@ def sub_category_listing(cate):
 @pages.route("/product/<string:_id>", methods = ['GET','POST'])
 def product_detail(_id):
     meta = update_information()
-    product = list(current_app.db.product.find({"_id": ObjectId(_id)}))[0]
+    product = list(current_app.db.product.find({"_id": _id}))[0]
     enu_imgs = enumerate(product.get("img_srcs"))
     product["description"] = product.get("description").replace("height", "")
     product["price_display"] = locale.format("%d", product["price"], grouping=True)    
@@ -99,22 +103,26 @@ def product_detail(_id):
     if form.validate_on_submit():
         if session.get("email") == None:
             return redirect(url_for('pages.login'))
-
-        dic = dict(
-            product_id = _id,
-            quantity = form.quantity.data
-        )
+        
+        product_dictionary = get_product_dictionary()
 
         current_user = meta["current_user"]
         lst_cart = current_user["cart_items"]
 
         lst_product_id_in_cart = [item["product_id"] for item in lst_cart]
         if _id not in lst_product_id_in_cart:
+            dic = dict(
+                product_id = _id,
+                quantity = form.quantity.data,
+                product_name = product_dictionary[_id]["product_name"],
+                price = product_dictionary[_id]["price"],
+                img_src =product_dictionary[_id]["img_src"]
+            )
             lst_cart.append(dic)
         else:
             for product in lst_cart:
                 if product["product_id"] == _id:
-                    product["quantity"] += dic["quantity"]
+                    product["quantity"] += form.quantity.data
 
         current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": lst_cart}})
         return redirect(request.path)
@@ -132,25 +140,9 @@ def product_detail(_id):
 def cart():
     meta = update_information()
     lst_cart = meta["current_user"].get("cart_items")
-    product_dictionary = {}
-    list_products = list(current_app.db.product.find({}))
-    for product in list_products:
-        img = product.get("img_srcs")
-        if len(img) == 0:
-            img = ""
-        else:
-            img = product.get("img_srcs")[0]
-        product_dictionary[product["_id"]] = {
-            "product_name": product["product_name"],
-            "price": product["price"],
-            "img_src": img
-        }
-    
+
     for i in range(len(lst_cart)):
         product = lst_cart[i]
-        product["product_name"] = product_dictionary[ObjectId(product["product_id"])]["product_name"]
-        product["price"] = product_dictionary[ObjectId(product["product_id"])]["price"]
-        product["img_src"] = product_dictionary[ObjectId(product["product_id"])]["img_src"]
         
         form = EditQuantityATCForm(prefix=product["product_id"])
         form.quantity.default = product["quantity"]
@@ -195,25 +187,9 @@ def cart():
 def checkout():
     meta = update_information()
     lst_cart = meta["current_user"].get("cart_items")
-    product_dictionary = {}
-    list_products = list(current_app.db.product.find({}))
-    for product in list_products:
-        img = product.get("img_srcs")
-        if len(img) == 0:
-            img = ""
-        else:
-            img = product.get("img_srcs")[0]
-        product_dictionary[product["_id"]] = {
-            "product_name": product["product_name"],
-            "price": product["price"],
-            "img_src": img
-        }
     
     for i in range(len(lst_cart)):
         product = lst_cart[i]
-        product["product_name"] = product_dictionary[ObjectId(product["product_id"])]["product_name"]
-        product["price"] = product_dictionary[ObjectId(product["product_id"])]["price"]
-        product["img_src"] = product_dictionary[ObjectId(product["product_id"])]["img_src"]
         product["total_value"] = product["price"] * product["quantity"]
 
     total_order_value = sum([product["total_value"] for product in lst_cart])
@@ -232,26 +208,9 @@ def order():
     lst_cart = meta["current_user"].get("cart_items")
     if len(lst_cart) == 0:
         return redirect(url_for('pages.index'))
-
-    product_dictionary = {}
-    list_products = list(current_app.db.product.find({}))
-    for product in list_products:
-        img = product.get("img_srcs")
-        if len(img) == 0:
-            img = ""
-        else:
-            img = product.get("img_srcs")[0]
-        product_dictionary[product["_id"]] = {
-            "product_name": product["product_name"],
-            "price": product["price"],
-            "img_src": img
-        }
     
     for i in range(len(lst_cart)):
         product = lst_cart[i]
-        product["product_name"] = product_dictionary[ObjectId(product["product_id"])]["product_name"]
-        product["price"] = product_dictionary[ObjectId(product["product_id"])]["price"]
-        product["img_src"] = product_dictionary[ObjectId(product["product_id"])]["img_src"]
         product["total_value"] = product["price"] * product["quantity"]
 
     total_order_value = sum([product["total_value"] for product in lst_cart])
@@ -261,7 +220,8 @@ def order():
         "_id": order_id,
         "items": lst_cart,
         "value": total_order_value,
-        "order_time": get_current_time()
+        "order_time": get_current_time(),
+        "customer_email": session.get("email")
     })
 
     current_app.db.users.update_one({"email": session.get("email")}, {"$push": {"orders": order_id}})

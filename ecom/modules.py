@@ -1,26 +1,7 @@
 from flask import current_app, session
 from datetime import date, datetime
 import pytz
-
-def refresh_cate_tree():
-  if session.get("cate_tree") == None:
-    raw_cate = list(current_app.db.product.aggregate( 
-            [
-                {"$group": { "_id": {
-                    "cate_report": "$cate_report", 
-                    "sub_cate_report": "$sub_cate_report" } } }
-            ]
-        ))
-    cate_tree = {}
-    for item in raw_cate:
-        print(item)
-        cate = item["_id"]["cate_report"]
-        sub_cate = item["_id"]["sub_cate_report"]
-        if cate not in cate_tree:
-            cate_tree[cate] = [sub_cate]
-        else:
-            cate_tree[cate].append(sub_cate)
-    session["cate_tree"] = cate_tree
+import json
 
 def save_user_to_session():
   	session['current_user'] = list(current_app.db.users.find({"email": session.get("email")}))[0]
@@ -41,6 +22,9 @@ def get_current_time():
     return datetime.now(tz=pytz.timezone('Asia/Bangkok'))
 
 def update_information():
+    with open("ecom/static/data/cate_tree.json", "r", encoding='utf-8') as f:
+        cate_tree = json.load(f)
+
     if session.get("email") == None:
         num_cart_item = 0
         current_user = {}
@@ -51,7 +35,25 @@ def update_information():
             num_cart_item = 0
         else:
             num_cart_item = len(cart)  
+
     return {
         'current_user': current_user,
-        'num_cart_item': num_cart_item
+        'num_cart_item': num_cart_item,
+        'cate_tree': cate_tree
     }
+
+def get_product_dictionary():
+    product_dictionary = {}
+    list_products = list(current_app.db.product.find({}))
+    for product in list_products:
+        img = product.get("img_srcs")
+        if len(img) == 0:
+            img = ""
+        else:
+            img = product.get("img_srcs")[0]
+        product_dictionary[product["_id"]] = {
+            "product_name": product["product_name"],
+            "price": product["price"],
+            "img_src": img
+        }
+    return product_dictionary

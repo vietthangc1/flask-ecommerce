@@ -1,0 +1,25 @@
+{
+    "Lifestyle": [
+        "Sport - Travel",
+        "Book & Office Supplies",
+        "Home Living"
+    ],
+    "ITC": [
+        "Electronic Accessories",
+        "Camera",
+        "IT"
+    ],
+    "Phones - Tablets": [
+        "Phones - Tablets"
+    ],
+    "Home Appliances": [
+        "TV",
+        "Major Domestic Appliance",
+        "Small Appliances"
+    ],
+    "CG": [
+        "Health - Beauty",
+        "Mom - Baby",
+        "FMCG"
+    ]
+}
