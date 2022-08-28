@@ -2,6 +2,8 @@ from flask import current_app, session
 from datetime import date, datetime
 import pytz
 import json
+import locale
+locale.setlocale(locale.LC_ALL, 'en_US')
 
 def save_user_to_session():
   	session['current_user'] = list(current_app.db.users.find({"email": session.get("email")}))[0]
@@ -42,9 +44,9 @@ def update_information():
         'cate_tree': cate_tree
     }
 
-def get_product_dictionary():
+def get_product_dictionary(_id):
     product_dictionary = {}
-    list_products = list(current_app.db.product.find({}))
+    list_products = list(current_app.db.product.find({"_id": _id}))
     for product in list_products:
         img = product.get("img_srcs")
         if len(img) == 0:
@@ -57,3 +59,23 @@ def get_product_dictionary():
             "img_src": img
         }
     return product_dictionary
+
+def add_to_cart(_id, quantity, lst_cart, product_dictionary):
+    lst_product_id_in_cart = [item["product_id"] for item in lst_cart]
+    if _id not in lst_product_id_in_cart:
+        dic = dict(
+            product_id = _id,
+            quantity = quantity,
+            product_name = product_dictionary[_id]["product_name"],
+            price = product_dictionary[_id]["price"],
+            img_src =product_dictionary[_id]["img_src"],
+            price_display = locale.format("%d", product_dictionary[_id]["price"], grouping=True)    
+        )
+        lst_cart.append(dic)
+
+    else:
+        for product in lst_cart:
+            if product["product_id"] == _id:
+                product["quantity"] += quantity
+
+    current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": lst_cart}})

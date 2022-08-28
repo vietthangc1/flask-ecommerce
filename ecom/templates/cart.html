@@ -21,7 +21,7 @@
                         Quantity: {{ render_number_field(product["form"].quantity) }}
                     </div>
                     <div class="row">
-                        Price: {{ product['price'] }}
+                        Price: {{ product['price_display'] }}
                     </div>
                     <div class="row">
                         {{ product["form"].submit(class_="btn btn-primary px-3") }}

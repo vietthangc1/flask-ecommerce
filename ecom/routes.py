@@ -19,7 +19,7 @@ from werkzeug.utils import secure_filename
 import os
 
 from ecom.forms import EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
-from .modules import get_current_time, get_product_dictionary, update_information
+from .modules import add_to_cart, get_current_time, get_product_dictionary, update_information
 import locale
 from .models import login_required
 locale.setlocale(locale.LC_ALL, 'en_US')
@@ -58,29 +58,14 @@ def sub_category_listing(cate):
             return redirect(url_for('pages.login'))
         
         _id = str(request.form.get("btn"))
-        product_dictionary = get_product_dictionary()
+        product_dictionary = get_product_dictionary(_id)
 
         current_user = meta["current_user"]
         lst_cart = current_user["cart_items"]
 
-        lst_product_id_in_cart = [item["product_id"] for item in lst_cart]
+        quantity = 1
+        add_to_cart(_id, quantity, lst_cart, product_dictionary)
 
-        if _id not in lst_product_id_in_cart:
-            dic = dict(
-                product_id = _id,
-                quantity = 1,
-                product_name = product_dictionary[_id]["product_name"],
-                price = product_dictionary[_id]["price"],
-                img_src =product_dictionary[_id]["img_src"]
-            )
-            lst_cart.append(dic)
-
-        else:
-            for product in lst_cart:
-                if product["product_id"] == _id:
-                    product["quantity"] += 1
-
-        current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": lst_cart}})
         return redirect(request.path)
 
     return render_template(
@@ -104,27 +89,13 @@ def product_detail(_id):
         if session.get("email") == None:
             return redirect(url_for('pages.login'))
         
-        product_dictionary = get_product_dictionary()
+        product_dictionary = get_product_dictionary(_id)
 
         current_user = meta["current_user"]
         lst_cart = current_user["cart_items"]
+        quantity = form.quantity.data
 
-        lst_product_id_in_cart = [item["product_id"] for item in lst_cart]
-        if _id not in lst_product_id_in_cart:
-            dic = dict(
-                product_id = _id,
-                quantity = form.quantity.data,
-                product_name = product_dictionary[_id]["product_name"],
-                price = product_dictionary[_id]["price"],
-                img_src =product_dictionary[_id]["img_src"]
-            )
-            lst_cart.append(dic)
-        else:
-            for product in lst_cart:
-                if product["product_id"] == _id:
-                    product["quantity"] += form.quantity.data
-
-        current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": lst_cart}})
+        add_to_cart(_id, quantity, lst_cart, product_dictionary)
         return redirect(request.path)
 
     return render_template(
@@ -150,28 +121,31 @@ def cart():
         product["form"] = form
 
     if request.method == "POST":
-        push_list = []        
+        push_list = [] 
         data = request.form
-        for k in data.keys():
-            if ("quantity" in k):
-                v = int(data.get(k))
-                if (v > 0):
-                    product_id = k.split("-")[0]
-                    quantity = v
-                    push_list.append({
-                        "product_id": product_id,
-                        "quantity": quantity
-                    })
+
         current_app.db.users.update_one(
             {
                 "email": session.get("email")
             },
             {
                 "$set": {
-                    "cart_items": push_list
+                    "cart_items": []
                 }
             }
-        )
+        )       
+
+        for k in data.keys():
+            if ("quantity" in k):
+                v = int(data.get(k))
+                if (v > 0):
+                    product_id = k.split("-")[0]
+                    product_dictionary = get_product_dictionary(product_id)
+                    meta = update_information()
+                    lst_cart = meta["current_user"].get("cart_items")
+                    quantity = v
+                    add_to_cart(product_id, quantity, lst_cart, product_dictionary)
+
 
         return redirect(url_for("pages.cart"))
 
@@ -191,14 +165,16 @@ def checkout():
     for i in range(len(lst_cart)):
         product = lst_cart[i]
         product["total_value"] = product["price"] * product["quantity"]
+        product["total_value_display"] = locale.format("%d", product["total_value"], grouping=True) 
 
     total_order_value = sum([product["total_value"] for product in lst_cart])
+    total_order_value_display = locale.format("%d", total_order_value, grouping=True) 
 
     return render_template(
         "checkout.html",
         list_product = lst_cart,
         num_cart_item = meta["num_cart_item"],
-        total_order_value = total_order_value
+        total_order_value = total_order_value_display
     )
 
 @pages.route("/order_success")
