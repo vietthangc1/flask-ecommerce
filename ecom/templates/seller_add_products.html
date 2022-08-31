@@ -1,0 +1,43 @@
+{% from "macros/seller_fields.html" import render_text_field, render_select_field %}
+{% extends "seller_layout.html" %}
+
+{% block main_content %}
+
+    <form name="login" method="post" enctype="multipart/form-data" novalidate class="form">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {%- for category, message in messages %}
+                <span class="form__flash form__flash--{{category}}"> {{ message }}</span>
+            {% endfor %}
+        {% endwith %}
+        
+        <div class="form__container">
+            {{ th_form.hidden_tag() }}
+
+            {{ render_text_field(th_form.product_name, "product_name") }}
+            {{ render_select_field(th_form.cate_report, "cate") }}
+            {{ render_select_field(th_form.sub_cate_report, "sub_cate") }}
+            {{ render_text_field(th_form.brand, "brand") }}
+            {{ render_text_field(th_form.price, "price") }}
+            {{ render_text_field(th_form.stocks, "stocks") }}
+            {{ render_text_field(th_form.img_file, "img_file") }}
+            {{ render_text_field(th_form.listed, "listed") }}
+            <label for="desc" class="orm-label">Description</label>
+            <textarea name="description" id="desc" cols="30" rows="10"></textarea>
+    
+            <div>
+                {{ th_form.submit(class_="btn btn-primary") }}
+            </div>
+        </div>
+    </form>
+    <script>
+        tinymce.init({
+          selector: 'textarea',
+          plugins: 'a11ychecker advcode casechange export formatpainter image editimage linkchecker autolink lists checklist media mediaembed pageembed permanentpen powerpaste table advtable tableofcontents tinycomments tinymcespellchecker',
+          toolbar: 'a11ycheck addcomment showcomments casechange checklist code export formatpainter image editimage pageembed permanentpen table tableofcontents',
+          toolbar_mode: 'floating',
+          tinycomments_mode: 'embedded',
+          tinycomments_author: 'Author name',
+        });
+    </script>
+
+{% endblock %}

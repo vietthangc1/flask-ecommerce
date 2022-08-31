@@ -18,7 +18,7 @@ from slugify import slugify
 from werkzeug.utils import secure_filename
 import os
 
-from ecom.forms import EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
+from ecom.forms import AddProductForm, EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
 from .modules import add_to_cart, get_current_time, get_product_dictionary, update_information
 import locale
 from .models import login_required
@@ -237,6 +237,77 @@ def orders_listing():
         num_cart_item = len(lst_cart),
         orders = orders
     )
+
+## Seller Center
+
+@pages.route("/seller", methods = ['GET'])
+def seller_index():
+    return render_template("seller_index.html")
+
+@pages.route("/seller/add_products", methods = ['GET', 'POST'])
+def seller_add_products():
+    form = AddProductForm()
+
+    if form.validate_on_submit():
+        f = form.img_file.data
+        if f == None:
+            img_src = ''
+        else:
+            img_path = os.path.dirname(os.path.realpath(__file__))+"/static/img/product_img/"
+            img_src = uuid.uuid4().hex + "." + f.filename.split(".")[-1]
+            f.save(img_path+img_src)
+
+        product_info = dict(
+            _id = uuid.uuid4().hex,
+            product_name = form.product_name.data,
+            cate_report = form.cate_report.data,
+            sub_cate_report = form.sub_cate_report.data,
+            brand = form.brand.data,
+            price = form.price.data,
+            stocks = form.stocks.data,
+            img_srcs = [img_src],
+            listed = form.listed.data,
+            description = request.form.get("description"),
+            orders = 0
+        )
+
+        current_app.db.product.insert_one(product_info)
+        return redirect(url_for('pages.seller_index'))
+    return render_template(
+        "seller_add_products.html",
+        title = "Add products",
+        th_form = form
+    )
+
+@pages.route("/seller/login", methods = ['GET', 'POST'])
+def seller_login():
+    if session.get("email"):
+        if session.get("url_bf_login") != None:
+            url = session.get("url_bf_login")
+            session["url_bf_login"] = None
+            return redirect(url)
+        return redirect(url_for('pages.seller_index'))
+
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        login_dic = {
+            'email' : form.email.data,
+            'password': form.password.data
+        }
+        user = list(current_app.db.users.find({"email": login_dic['email']}))
+        if len(user) > 0:
+            if pbkdf2_sha256.verify(login_dic['password'], user[0]['password']):
+                session['email'] = login_dic['email']
+                return redirect(request.path)
+        flash("Wrong email or password!", "danger")
+    return render_template("seller_login.html", th_form = form, title="Log in")
+
+@pages.route("/seller/logout")
+def seller_logout():
+    session['email'] = None
+    session['current_user'] = None
+    return redirect(url_for('pages.seller_index'))
 
 @pages.route("/register", methods = ['GET','POST'])
 def register():
