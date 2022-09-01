@@ -1,10 +1,10 @@
 {% macro render_text_field(field) %}
-<div class="form__group">
-  {{ field.label(class_ = "form__label")}}
-  {{ field(class_ = "form__field")}}
+<div class="mb-3">
+  {{ field.label(class_ = "form-label")}}
+  {{ field(class_ = "form-control")}}
 
     {% for e in field.errors %}
-    <span class="form__error">{{e}}</span>
+    <span class="form-text">{{e}}</span>
     {% endfor %}
 
 </div>

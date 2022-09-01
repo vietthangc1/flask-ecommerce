@@ -51,7 +51,9 @@ def category_listing(cate):
 @pages.route("/sub_category/<string:cate>", methods = ['GET', 'POST'])
 def sub_category_listing(cate):
     meta = update_information()
-    list_product = list(current_app.db.product.find({"sub_cate_report": cate}))
+    list_product = list(current_app.db.product.find({
+        "sub_cate_report": cate,
+        "stocks": {"$gt": 0}}))
 
     if request.method == "POST":
         if session.get("email") == None:
@@ -121,7 +123,6 @@ def cart():
         product["form"] = form
 
     if request.method == "POST":
-        push_list = [] 
         data = request.form
 
         current_app.db.users.update_one(
@@ -200,6 +201,18 @@ def order():
         "customer_email": session.get("email")
     })
 
+    for item in lst_cart:
+        product_id = item["product_id"]
+        quantity = item["quantity"]
+        print("{} - {}".format(product_id, quantity))
+        current_app.db.product.update_one(
+            {"_id": product_id}, 
+            {"$inc": {
+                "stocks": -quantity,
+                "sales": quantity
+            }
+            })
+
     current_app.db.users.update_one({"email": session.get("email")}, {"$push": {"orders": order_id}})
     current_app.db.users.update_one({"email": session.get("email")}, {"$set": {"cart_items": []}})
 
@@ -245,6 +258,7 @@ def seller_index():
     return render_template("seller_index.html")
 
 @pages.route("/seller/add_products", methods = ['GET', 'POST'])
+@login_required
 def seller_add_products():
     form = AddProductForm()
 
@@ -268,7 +282,8 @@ def seller_add_products():
             img_srcs = [img_src],
             listed = form.listed.data,
             description = request.form.get("description"),
-            orders = 0
+            orders = 0,
+            seller = session.get("email")
         )
 
         current_app.db.product.insert_one(product_info)
@@ -278,6 +293,16 @@ def seller_add_products():
         title = "Add products",
         th_form = form
     )
+
+@pages.route("/seller/stocks", methods = ['GET', 'POST'])
+@login_required
+def seller_stocks():
+    list_products = list(current_app.db.product.find({"seller": session.get("email")}))
+    print(list_products)
+    return render_template(
+        "seller_stocks.html",
+        title = "Stocks management",
+        list_products = list_products)
 
 @pages.route("/seller/login", methods = ['GET', 'POST'])
 def seller_login():
