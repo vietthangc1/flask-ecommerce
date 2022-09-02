@@ -10,7 +10,7 @@
             {% endfor %}
         {% endwith %}
         
-        <div class="form__container">
+        <div style="width: 70%; margin-top: 3rem" class="container">
             {{ th_form.hidden_tag() }}
 
             {{ render_text_field(th_form.product_name, "product_name") }}
@@ -19,10 +19,21 @@
             {{ render_text_field(th_form.brand, "brand") }}
             {{ render_text_field(th_form.price, "price") }}
             {{ render_text_field(th_form.stocks, "stocks") }}
+
+            {% if product_info.get("img_srcs") %}
+            <div class="product_avatar" style="max-width: 100%; max-height: 10rem; margin-bottom: 1rem; display: flex;">
+                {% for image_link in product_info.get("img_srcs") %}
+                <a href="{{ url_for('pages.seller_delete_product_img', img_src = image_link, _id = product_info['_id']) }}"><img style="max-height: 10rem;" src="{{ url_for('static', filename = 'img/product_img/'+image_link) }}" alt="{{image_link}}"></a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             {{ render_text_field(th_form.img_file, "img_file") }}
             {{ render_text_field(th_form.listed, "listed") }}
             <label for="desc" class="form-label">Description</label>
-            <textarea name="description" id="desc" cols="30" rows="10"></textarea>
+            <textarea name="description" id="desc" cols="30" rows="10">
+                {{ product_info["description"] | safe}}
+            </textarea>
     
             <div>
                 {{ th_form.submit(class_="btn btn-primary") }}

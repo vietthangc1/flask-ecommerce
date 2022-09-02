@@ -31,7 +31,7 @@
                 Unlisted <a class="btn btn-success" href="{{ url_for('pages.seller_toggle_listed' , _id = product['_id']) }}">List</a>
                 {% endif %}
             </td>
-            <td><a href=""><i class="fas fa-edit"></i></a></td>
+            <td><a href="{{ url_for('pages.seller_edit_products', _id = product['_id']) }}"><i class="fas fa-edit"></i></a></td>
             <td><a href="{{ url_for('pages.seller_remove_confirmation', _id = product['_id']) }}"><i class="fa fa-trash" aria-hidden="true"></i></a></td>
         </tr>
         {% endfor %}

@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from nis import cat
 from sys import prefix
 import uuid
 from flask import (
@@ -18,10 +19,10 @@ from slugify import slugify
 from werkzeug.utils import secure_filename
 import os
 
-from ecom.forms import AddProductForm, EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
+from ecom.forms import AddProductForm, EditProductForm, EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
 from .modules import add_to_cart, get_current_time, get_product_dictionary, update_information
 import locale
-from .models import login_required
+from .models import Product, login_required
 locale.setlocale(locale.LC_ALL, 'en_US')
 
 
@@ -312,7 +313,7 @@ def seller_add_products():
             img_srcs = [img_src],
             listed = form.listed.data,
             description = request.form.get("description"),
-            orders = 0,
+            sales = 0,
             seller = session.get("email")
         )
 
@@ -366,6 +367,63 @@ def seller_remove(_id):
     current_app.db.product.delete_one({"_id": _id})
     return redirect(url_for('pages.seller_stocks'))
 
+@pages.route("/seller/edit/<string:_id>", methods = ['GET', 'POST'])
+@login_required
+def seller_edit_products(_id):
+    product_info = list(current_app.db.product.find({"_id": _id}))[0]
+    if product_info["seller"] != session.get("email"):
+        return redirect(url_for('pages.seller_stocks'))
+    product = Product(**product_info)
+
+    form = EditProductForm(obj = product)
+    
+    if form.validate_on_submit():
+        f = form.img_file.data
+        current_img_srcs = product_info["img_srcs"]
+        if f != None:
+            img_path = os.path.dirname(os.path.realpath(__file__))+"/static/img/product_img/"
+            img_src = uuid.uuid4().hex + "." + f.filename.split(".")[-1]
+            f.save(img_path+img_src)
+            if current_img_srcs != None:
+                current_img_srcs.append(img_src)
+            else:
+                current_img_srcs = [img_src]
+
+        edited_product_info = dict(
+            _id = product_info["_id"],
+            product_name = product_info["product_name"],
+            cate_report = product_info["cate_report"],
+            sub_cate_report = product_info["sub_cate_report"],
+            brand = form.brand.data,
+            price = int(form.price.data),
+            seller = product_info["seller"],
+            stocks = int(form.stocks.data),
+            img_srcs = current_img_srcs,
+            listed = int(form.listed.data),
+            description = request.form.get("description"),
+            sales = product_info["sales"]
+        )
+        current_app.db.product.update_one({"_id": _id}, {"$set": edited_product_info})
+        return redirect(url_for('pages.seller_stocks'))
+
+    return render_template(
+        "seller_edit_products.html",
+        title = "Edit product",
+        th_form = form,
+        product_info = product_info
+    )
+
+@pages.route("/seller/delete_img/<string:img_src>/<string:_id>", methods = ['GET', 'POST'])
+@login_required
+def seller_delete_product_img(img_src,_id):
+    product_info = list(current_app.db.product.find({"_id": _id}))[0]
+    if product_info["seller"] != session.get("email"):
+        return redirect(url_for('pages.seller_stocks'))
+    current_app.db.product.update_one({"_id": _id}, {"$pull": {"img_srcs": img_src}})
+    img_path = os.path.dirname(os.path.realpath(__file__))+"/static/img/product_img/"
+    os.remove(img_path+img_src)
+    return redirect(url_for('pages.seller_edit_products', _id = _id))
+    
 @pages.route("/seller/login", methods = ['GET', 'POST'])
 def seller_login():
     if session.get("email"):

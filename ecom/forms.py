@@ -50,6 +50,38 @@ class AddProductForm(FlaskForm):
     )
     submit = SubmitField("Add product")
 
+class EditProductForm(FlaskForm):
+    product_name = StringField(
+        "Product name", 
+        validators=[InputRequired(), Length(min=4)], 
+        render_kw={'readonly': True}
+        )
+    cate_report = SelectField(
+        "Cate report",
+        validate_choice= False,
+        validators=[InputRequired()],
+        choices=[(cate, cate) for cate in ['Lifestyle', 'ITC', 'Phones - Tablets', 'Home Appliances', 'CG']], 
+        render_kw={'readonly': True}
+        )
+    sub_cate_report = SelectField(
+        "Sub cate report",
+        validate_choice= False,
+        validators=[InputRequired()],
+        choices=[(sub_cate ,sub_cate) for sub_cate in ['Sport - Travel', 'Book & Office Supplies', 'Home Living', 'Electronic Accessories', 'Camera', 'IT', 'Phones - Tablets', 'TV', 'Major Domestic Appliance', 'Small Appliances', 'Health - Beauty', 'Mom - Baby', 'FMCG']], 
+        render_kw={'readonly': True}
+        )
+    price = IntegerField("Price vnđ", validators=[InputRequired()])
+    brand = StringField("Brand")
+    stocks = IntegerField("Stocks", validators=[InputRequired()])    
+    img_file = FileField("Add more image", validators=[FileAllowed(['jpg', 'png'], 'Images only!')])
+    listed = SelectField(
+        "Listed ?",
+        validate_choice= False,
+        validators=[InputRequired()],
+        choices=( (1, "Listed"), (0, "Not listed"))
+    )
+    submit = SubmitField("Edit product")
+
 class LoginForm(FlaskForm):
     email = EmailField("Email", validators=[InputRequired(), Email()])
     password = PasswordField("Password", validators=[

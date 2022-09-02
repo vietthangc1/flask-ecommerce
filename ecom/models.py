@@ -12,6 +12,21 @@ from flask import (
   current_app
 )
 
+@dataclass
+class Product:
+    _id: str
+    product_name: str
+    cate_report: str
+    sub_cate_report: str
+    brand: str
+    price: int
+    seller: str
+    description: str
+    stocks: int
+    sales: int
+    listed: int
+    img_srcs: List[str] = field(default_factory=list)
+
 def login_required(route):
     @functools.wraps(route)
     def route_wrapper(*args, **kwargs):

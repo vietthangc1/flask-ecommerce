@@ -1,7 +1,11 @@
 {% macro render_text_field(field, id) %}
 <div class="mb-3">
-  {{ field.label(class_ = "form-label")}}
-  {{ field(id = id, class_ = "form-control")}}
+    {{ field.label(class_ = "form-label")}}
+    {% if field.errors %}
+    {{ field(id = id, class_ = "form-control is-invalid")}}
+    {% else %}
+    {{ field(id = id, class_ = "form-control")}}
+    {% endif %}
 
     {% for e in field.errors %}
     <div class="form-text">{{e}}</div>
@@ -13,7 +17,11 @@
 {% macro render_select_field(field, id) %}
 <div class="mb-3">
   {{ field.label(class_ = "form-label")}}
-  {{ field(id = id, class_ = "form-select")}}
+  {% if field.errors %}
+    {{ field(id = id, class_ = "form-select is-invalid")}}
+  {% else %}
+    {{ field(id = id, class_ = "form-select")}}
+  {% endif %}
 
     {% for e in field.errors %}
     <div class="form-text">{{e}}</div>
