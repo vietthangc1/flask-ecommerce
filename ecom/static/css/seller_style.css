@@ -65,3 +65,13 @@ body {
     height: auto;
     margin-bottom: 2rem;
 }
+
+td {
+    vertical-align: middle;
+}
+
+button > a {
+    color: var(--text-light);
+    font: inherit;
+    text-decoration: none;
+}

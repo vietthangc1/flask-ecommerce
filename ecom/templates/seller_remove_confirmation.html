@@ -1,0 +1,15 @@
+{% extends "seller_layout.html" %}
+
+{% block main_content %}
+
+<div class="container">
+    <h4>Are you sure to delete this product ?</h4>
+    <h5>{{ product["product_name"] }}</h5>
+    <p>Sub-category: {{ product["sub_cate_report"] }}</p>
+    <p>Price: {{ product["price"] }}</p>
+    <p>Stocks: {{ product["stocks"] }}</p>
+    <button class="btn btn-danger"><a href="{{ url_for('pages.seller_remove', _id = product['_id']) }}">Delete</a></button>
+    <button class="btn btn-primary"><a href="{{ url_for('pages.seller_stocks')}}">Back to Stocks page</a></button>
+</div>
+    
+{% endblock %}

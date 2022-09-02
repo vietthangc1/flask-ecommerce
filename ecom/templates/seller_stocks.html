@@ -4,30 +4,35 @@
 
 <table class="table table-striped table-hover">
     <thead>
-        <th scope = "col">No.</th>
+        <th scope = "col">#</th>
         <th scope = "col">Name</th>
         <th scope = "col">Category</th>
         <th scope = "col">Sub-category</th>
         <th scope = "col">Brand</th>
         <th scope = "col">Price</th>
-        <th scope = "col">Stocks</th>
+        <th style="text-align: center;" scope = "col">Stocks</th>
         <th scope = "col">Listed ?</th>
-        <th scope = "col">Edit</th>
-        <th scope = "col">Remove</th>
+        <th scope = "col"></th>
+        <th scope = "col"></th>
     </thead>
     <tbody>
         {% for product in list_products %}
         <tr>
             <td scope = "row">#</td>
-            <td>{{ product["product_name"] }}</td>
+            <td><a href="{{ url_for('pages.product_detail', _id = product['_id']) }}">{{ product["product_name"] }}</a></td>
             <td>{{ product["cate_report"] }}</td>
             <td>{{ product["sub_cate_report"] }}</td>
             <td>{{ product.get("brand") }}</td>
-            <td>{{ product.get("price") }}</td>
-            <td>{{ product.get("stocks") }}</td>
-            <td>{{ product.get("listed") }}</td>
-            <td></td>
-            <td></td>
+            <td style="text-align: right;">{{ "%.f đ"|format(product.get("price")) }}</td>
+            <td style="text-align: center;">{{ product.get("stocks") }}</td>
+            <td>{% if product.get("listed") == 1 %}
+                Listed <a class="btn btn-danger" href="{{ url_for('pages.seller_toggle_listed' , _id = product['_id']) }}">Unlist</a>
+                {% else %}
+                Unlisted <a class="btn btn-success" href="{{ url_for('pages.seller_toggle_listed' , _id = product['_id']) }}">List</a>
+                {% endif %}
+            </td>
+            <td><a href=""><i class="fas fa-edit"></i></a></td>
+            <td><a href="{{ url_for('pages.seller_remove_confirmation', _id = product['_id']) }}"><i class="fa fa-trash" aria-hidden="true"></i></a></td>
         </tr>
         {% endfor %}
     </tbody>

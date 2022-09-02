@@ -251,6 +251,36 @@ def orders_listing():
         orders = orders
     )
 
+@pages.route("/login", methods = ['GET','POST'])
+def login():
+    if session.get("email"):
+        if session.get("url_bf_login") != None:
+            url = session.get("url_bf_login")
+            session["url_bf_login"] = None
+            return redirect(url)
+        return redirect("/")
+
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        login_dic = {
+            'email' : form.email.data,
+            'password': form.password.data
+        }
+        user = list(current_app.db.users.find({"email": login_dic['email']}))
+        if len(user) > 0:
+            if pbkdf2_sha256.verify(login_dic['password'], user[0]['password']):
+                session['email'] = login_dic['email']
+                return redirect(request.path)
+        flash("Wrong email or password!", "danger")
+    return render_template('login.html', th_form = form, title="Log in")
+
+@pages.route("/logout")
+def logout():
+    session['email'] = None
+    session['current_user'] = None
+    return redirect("/")
+
 ## Seller Center
 
 @pages.route("/seller", methods = ['GET'])
@@ -298,11 +328,43 @@ def seller_add_products():
 @login_required
 def seller_stocks():
     list_products = list(current_app.db.product.find({"seller": session.get("email")}))
-    print(list_products)
     return render_template(
         "seller_stocks.html",
         title = "Stocks management",
         list_products = list_products)
+
+@pages.route("/seller/toggle_listed/<string:_id>", methods = ['GET', 'POST'])
+@login_required
+def seller_toggle_listed(_id):
+    product_info = list(current_app.db.product.find({"_id": _id}))[0]
+    if product_info["seller"] != session.get("email"):
+        return redirect(url_for('pages.seller_stocks'))
+    if product_info["listed"] == 0:
+        current_app.db.product.update_one({"_id": _id}, {"$set": {"listed": 1}})
+    else:
+        current_app.db.product.update_one({"_id": _id}, {"$set": {"listed": 0}})
+    return redirect(url_for('pages.seller_stocks'))
+
+@pages.route("/seller/remove_confirmation/<string:_id>", methods = ['GET', 'POST'])
+@login_required
+def seller_remove_confirmation(_id):
+    product_info = list(current_app.db.product.find({"_id": _id}))[0]
+    if product_info["seller"] != session.get("email"):
+        return redirect(url_for('pages.seller_stocks'))
+    return render_template(
+        "seller_remove_confirmation.html",
+        title = "Delete Confirmation",
+        product = product_info)
+
+@pages.route("/seller/remove/<string:_id>", methods = ['GET', 'POST'])
+@login_required
+def seller_remove(_id):
+    product_info = list(current_app.db.product.find({"_id": _id}))[0]
+    if product_info["seller"] != session.get("email"):
+        return redirect(url_for('pages.seller_stocks'))
+    print(_id)
+    current_app.db.product.delete_one({"_id": _id})
+    return redirect(url_for('pages.seller_stocks'))
 
 @pages.route("/seller/login", methods = ['GET', 'POST'])
 def seller_login():
@@ -356,33 +418,3 @@ def register():
         return redirect("/login")
     return render_template('register.html', th_form = form, title="Register")
 
-
-@pages.route("/login", methods = ['GET','POST'])
-def login():
-    if session.get("email"):
-        if session.get("url_bf_login") != None:
-            url = session.get("url_bf_login")
-            session["url_bf_login"] = None
-            return redirect(url)
-        return redirect("/")
-
-    form = LoginForm()
-
-    if form.validate_on_submit():
-        login_dic = {
-            'email' : form.email.data,
-            'password': form.password.data
-        }
-        user = list(current_app.db.users.find({"email": login_dic['email']}))
-        if len(user) > 0:
-            if pbkdf2_sha256.verify(login_dic['password'], user[0]['password']):
-                session['email'] = login_dic['email']
-                return redirect(request.path)
-        flash("Wrong email or password!", "danger")
-    return render_template('login.html', th_form = form, title="Log in")
-
-@pages.route("/logout")
-def logout():
-    session['email'] = None
-    session['current_user'] = None
-    return redirect("/")
