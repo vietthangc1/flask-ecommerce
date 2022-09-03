@@ -16,6 +16,7 @@ from flask import (
 class Product:
     _id: str
     product_name: str
+    product_id: int
     cate_report: str
     sub_cate_report: str
     brand: str

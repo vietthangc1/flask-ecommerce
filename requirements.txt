@@ -8,3 +8,4 @@ email_validator
 passlib
 flask_qrcode
 python-slugify
+flask-paginate

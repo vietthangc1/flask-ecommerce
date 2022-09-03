@@ -18,6 +18,7 @@ from passlib.hash import pbkdf2_sha256
 from slugify import slugify
 from werkzeug.utils import secure_filename
 import os
+from flask_paginate import Pagination, get_page_parameter, get_page_args
 
 from ecom.forms import AddProductForm, EditProductForm, EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
 from .modules import add_to_cart, get_current_time, get_product_dictionary, update_information
@@ -346,12 +347,45 @@ def seller_add_products():
 @pages.route("/seller/stocks", methods=['GET', 'POST'])
 @login_required
 def seller_stocks():
+    search = False
+    q = request.args.get('q')
+    if q:
+        search = True
+    
+    if session.get("per_page_stocks"):
+        pass
+    else:
+        session["per_page_stocks"] = 10
+    
+    if request.method == 'POST':
+        session["per_page_stocks"] = int(request.form.get("per_page"))
+
     list_products = list(current_app.db.product.find(
         {"seller": session.get("email")}))
+    total = len(list_products)
+
+    page, per_page, offset = get_page_args(page_parameter='page',
+                                           per_page_parameter='per_page')
+    per_page = session.get("per_page_stocks")
+
+    pagination_products = list_products[offset: offset + per_page]
+
+    page = request.args.get(get_page_parameter(), type = int, default = 1)
+    pagination = Pagination(
+        page = page, 
+        total = total, 
+        search = search, 
+        record_name = 'Stocks',
+        per_page = per_page,
+        )
     return render_template(
         "seller_stocks.html",
         title="Stocks management",
-        list_products=list_products)
+        list_products=pagination_products,
+        pagination=pagination,
+        page = page,
+        per_page = per_page
+        )
 
 
 @pages.route("/seller/toggle_listed/<string:_id>", methods=['GET', 'POST'])
