@@ -95,3 +95,7 @@ button > a {
 .stocks_listing {
     font-size: 0.9rem;
 }
+
+form {
+    margin-bottom: 1rem
+}

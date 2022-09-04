@@ -82,6 +82,23 @@ class EditProductForm(FlaskForm):
     )
     submit = SubmitField("Edit product")
 
+class FilterStockForm(FlaskForm):
+    cate_report = SelectField(
+        "Cate report",
+        validate_choice= False,
+        validators=[InputRequired()],
+        choices=[('.',"All"), ('Lifestyle', 'Lifestyle'), ('ITC', 'ITC'), ('Phones - Tablets', 'Phones - Tablets'), ('Home Appliances', 'Home Appliances'), ('CG', 'CG')], 
+        render_kw={'readonly': True}
+        )
+    sub_cate_report = SelectField(
+        "Sub cate report",
+        validate_choice= False,
+        validators=[InputRequired()],
+        choices=[('.',"All"), ('Sport - Travel', 'Sport - Travel'), ('Book & Office Supplies', 'Book & Office Supplies'), ('Home Living', 'Home Living'), ('Electronic Accessories', 'Electronic Accessories'), ('Camera', 'Camera'), ('IT', 'IT'), ('Phones - Tablets', 'Phones - Tablets'), ('TV', 'TV'), ('Major Domestic Appliance', 'Major Domestic Appliance'), ('Small Appliances', 'Small Appliances'), ('Health - Beauty', 'Health - Beauty'), ('Mom - Baby', 'Mom - Baby'), ('FMCG', 'FMCG')], 
+        render_kw={'readonly': True}
+        )
+    submit = SubmitField("Filter")
+
 class LoginForm(FlaskForm):
     email = EmailField("Email", validators=[InputRequired(), Email()])
     password = PasswordField("Password", validators=[

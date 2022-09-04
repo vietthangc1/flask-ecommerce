@@ -1,26 +1,34 @@
 var cate_tree = {
     "Lifestyle": [
+        ".",
         "Sport - Travel",
         "Book & Office Supplies",
         "Home Living"
     ],
     "ITC": [
+        ".",
         "Electronic Accessories",
         "Camera",
         "IT"
     ],
     "Phones - Tablets": [
+        ".",
         "Phones - Tablets"
     ],
     "Home Appliances": [
+        ".",
         "TV",
         "Major Domestic Appliance",
         "Small Appliances"
     ],
     "CG": [
+        ".",
         "Health - Beauty",
         "Mom - Baby",
         "FMCG"
+    ],
+    ".": [
+        ".",
     ]
 }
 
@@ -36,9 +44,15 @@ $('#cate').change(function() {
         // iterate  and generate options
         .map(function(v) {
             // generate options with the array element
+            value = v;
+            if (v == '.') {
+                text = "All"
+            } else {
+                text = v
+            }
             return $('<option/>', {
-            value: v,
-            text: v
+            value: value,
+            text: text
             })
         })
         )

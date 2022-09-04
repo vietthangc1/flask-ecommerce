@@ -1,6 +1,35 @@
+{% from "macros/seller_fields.html" import render_text_field, render_select_field %}
 {% extends "seller_layout.html" %}
 
 {% block main_content %}
+
+<form action="" method="post">
+    <div class="row" >
+        <div class="col-md-5">
+            {{ render_select_field(th_form.cate_report, "cate")}}
+        </div>
+        <div class="col-md-5">
+            {{ render_select_field(th_form.sub_cate_report, "sub_cate")}}
+        </div>
+        <div class="col-md-2" style="display: flex; vertical-align: middle;">
+            {{ th_form.submit(class_="btn btn-primary") }}
+        </div>
+    </div>
+</form>
+
+<form action="" method="post">
+    Sort by
+    <select name="sort_by" id="" onchange='if(this.value != 0) { this.form.submit(); }'>
+        <option value="0">Choose one</option>
+        <option value="price">Price</option>
+        <option value="stocks">Stocks</option>
+        <option value="name">Product name</option>
+        <option value="brand">Brand</option>
+    </select>
+</form>
+
+<hr>
+
 {{ pagination.links }}
 {{ pagination.info }}
 

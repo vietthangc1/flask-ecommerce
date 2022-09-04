@@ -20,7 +20,7 @@ from werkzeug.utils import secure_filename
 import os
 from flask_paginate import Pagination, get_page_parameter, get_page_args
 
-from ecom.forms import AddProductForm, EditProductForm, EditQuantityATCForm, LoginForm, PDPtoATCForm, RegisterForm
+from ecom.forms import AddProductForm, EditProductForm, EditQuantityATCForm, FilterStockForm, LoginForm, PDPtoATCForm, RegisterForm
 from .modules import add_to_cart, get_current_time, get_product_dictionary, update_information
 import locale
 from .models import Product, login_required
@@ -59,6 +59,27 @@ def sub_category_listing(cate):
     list_product = list(current_app.db.product.find({
         "sub_cate_report": cate,
         "stocks": {"$gt": 0}}))
+        
+    total = len(list_product)
+
+    page, per_page, offset = get_page_args(page_parameter='page',
+                                           per_page_parameter='per_page')
+    per_page = 20
+
+    start = per_page * (page - 1)
+    end = start + per_page
+    if start + per_page > total:
+        end = total
+
+    pagination_products = list_product[start:end]
+
+    page = request.args.get(get_page_parameter(), type = int, default = 1)
+    pagination = Pagination(
+        page = page, 
+        total = total, 
+        record_name = 'products',
+        per_page = per_page,
+        )
 
     if request.method == "POST":
         if session.get("email") == None:
@@ -78,8 +99,11 @@ def sub_category_listing(cate):
     return render_template(
         "shop.html",
         cate_tree=meta.get("cate_tree"),
-        list_product=list_product,
-        num_cart_item=meta["num_cart_item"]
+        list_product=pagination_products,
+        num_cart_item=meta["num_cart_item"],
+        pagination=pagination,
+        page = page,
+        per_page = per_page,
     )
 
 
@@ -347,28 +371,55 @@ def seller_add_products():
 @pages.route("/seller/stocks", methods=['GET', 'POST'])
 @login_required
 def seller_stocks():
+    session['source_url'] = request.path
+
     search = False
     q = request.args.get('q')
     if q:
         search = True
     
-    if session.get("per_page_stocks"):
-        pass
-    else:
+    if not session.get("per_page_stocks"):
         session["per_page_stocks"] = 10
     
-    if request.method == 'POST':
-        session["per_page_stocks"] = int(request.form.get("per_page"))
+    if not session.get("cate_report_filter"):
+        session["cate_report_filter"] = "."
+        session["sub_cate_report_filter"] = "."
+    
+    form = FilterStockForm()
+    form.cate_report.default = session["cate_report_filter"]
+    form.sub_cate_report.default = session["sub_cate_report_filter"]
+    form.process()
 
+    if request.method == 'POST':
+        if request.form.get("per_page"):
+            session["per_page_stocks"] = int(request.form.get("per_page"))
+        if request.form.get("cate_report"):
+            session["cate_report_filter"] = request.form.get("cate_report")
+            session["sub_cate_report_filter"] = request.form.get("sub_cate_report")
+    
     list_products = list(current_app.db.product.find(
-        {"seller": session.get("email")}))
+        {
+            "seller": session.get("email"),
+            "cate_report": {
+                "$regex": session["cate_report_filter"],
+            },
+            "sub_cate_report": {
+                "$regex": session["sub_cate_report_filter"],
+            }
+        }))
+
     total = len(list_products)
 
     page, per_page, offset = get_page_args(page_parameter='page',
                                            per_page_parameter='per_page')
     per_page = session.get("per_page_stocks")
 
-    pagination_products = list_products[offset: offset + per_page]
+    start = per_page * (page - 1)
+    end = start + per_page
+    if start + per_page > total:
+        end = total
+
+    pagination_products = list_products[start:end]
 
     page = request.args.get(get_page_parameter(), type = int, default = 1)
     pagination = Pagination(
@@ -384,7 +435,8 @@ def seller_stocks():
         list_products=pagination_products,
         pagination=pagination,
         page = page,
-        per_page = per_page
+        per_page = per_page,
+        th_form = form
         )
 
 
