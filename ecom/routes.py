@@ -541,6 +541,83 @@ def seller_delete_product_img(img_src, _id):
     return redirect(url_for('pages.seller_edit_products', _id=_id))
 
 
+@pages.route("/seller/sales", methods=['GET', 'POST'])
+@login_required
+def seller_sales():
+    session['source_url'] = request.path
+
+    search = False
+    q = request.args.get('q')
+    if q:
+        search = True
+    
+    if not session.get("per_page_sales"):
+        session["per_page_sales"] = 10
+        
+    if not session.get("cate_report_filter"):
+        session["cate_report_filter"] = "."
+        session["sub_cate_report_filter"] = "."
+    
+    form = FilterStockForm()
+    form.cate_report.default = session["cate_report_filter"]
+    form.sub_cate_report.default = session["sub_cate_report_filter"]
+    form.process()
+
+    if request.method == 'POST':
+        if request.form.get("per_page"):
+            session["per_page_sales"] = int(request.form.get("per_page"))
+        if request.form.get("cate_report"):
+            session["cate_report_filter"] = request.form.get("cate_report")
+            session["sub_cate_report_filter"] = request.form.get("sub_cate_report")
+    
+    list_products = list(current_app.db.product.find(
+        {
+            "seller": session.get("email"),
+            "cate_report": {
+                "$regex": session["cate_report_filter"],
+            },
+            "sub_cate_report": {
+                "$regex": session["sub_cate_report_filter"],
+            }
+        }))
+    
+    total_revenue = sum([product["price"] * product['sales'] for product in list_products])
+    total_sales = sum([product['sales'] for product in list_products])
+
+    total = len(list_products)
+
+    page, per_page, offset = get_page_args(page_parameter='page',
+                                           per_page_parameter='per_page')
+    per_page = session.get("per_page_sales")
+
+    start = per_page * (page - 1)
+    end = start + per_page
+    if start + per_page > total:
+        end = total
+
+    pagination_products = list_products[start:end]
+
+    page = request.args.get(get_page_parameter(), type = int, default = 1)
+    pagination = Pagination(
+        page = page, 
+        total = total, 
+        search = search, 
+        record_name = 'Sales',
+        per_page = per_page,
+        )
+    return render_template(
+        "seller_sales.html",
+        title="Sales report",
+        list_products=pagination_products,
+        pagination=pagination,
+        page = page,
+        per_page = per_page,
+        th_form = form,
+        total_revenue = total_revenue,
+        total_sales = total_sales
+        )
+
+
 @pages.route("/seller/login", methods=['GET', 'POST'])
 def seller_login():
     if session.get("email"):

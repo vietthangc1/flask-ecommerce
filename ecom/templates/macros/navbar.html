@@ -1,4 +1,4 @@
-{% macro topbar(num_cart_item) %}
+{% macro topbar(num_cart_item, email) %}
 <!-- Topbar Start -->
 <div class="container-fluid">
   <div class="row bg-secondary py-2 px-xl-5">
@@ -15,6 +15,18 @@
     </div>
     <div class="col-lg-6 text-center text-lg-right">
       <div class="d-inline-flex align-items-center">
+        {% if not email %}
+          <a href="{{ url_for('pages.login') }}" class="text-dark">Login</a>
+          <span class="text-muted px-2">|</span>
+          <a href="{{ url_for('pages.register') }}" class="text-dark">Register</a>
+          <span class="text-muted px-2">|</span>
+        {% else %}
+        {% set email_split = email.split('@') %}
+          <a href="#" class="text-dark">Hi, {{ email_split[0] }}</a>
+          <span class="text-muted px-2">|</span>
+          <a href="{{ url_for('pages.logout') }}" class="text-dark">Logout</a>
+          <span class="text-muted px-2">|</span>
+        {% endif %}
         <a class="text-dark px-2" href="">
           <i class="fab fa-facebook-f"></i>
         </a>
@@ -121,18 +133,6 @@
             </div>
             <a href="contact.html" class="nav-item nav-link">Contact</a>
           </div>
-          {% if not email %}
-          <div class="navbar-nav ml-auto py-0">
-            <a href="{{ url_for('pages.login') }}" class="nav-item nav-link">Login</a>
-            <a href="{{ url_for('pages.register') }}" class="nav-item nav-link">Register</a>
-          </div>
-          {% else %}
-          {% set email_split = email.split('@') %}
-          <div class="navbar-nav ml-auto py-0">
-            <a href="#" class="nav-item nav-link">Hi, {{ email_split[0] }}</a>
-            <a href="{{ url_for('pages.logout') }}" class="nav-item nav-link">Logout</a>
-          </div>
-          {% endif %}
         </div>
       </nav>
       <div id="header-carousel" class="carousel slide" data-ride="carousel">

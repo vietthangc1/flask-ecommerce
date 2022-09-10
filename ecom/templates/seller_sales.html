@@ -1,0 +1,104 @@
+{% from "macros/seller_fields.html" import render_text_field, render_select_field %}
+{% extends "seller_layout.html" %}
+
+{% block main_content %}
+
+<div class="sales_overall">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card-body">
+
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div style="align-items: center;" class="card">
+                <div class="card-body">
+                    <p class="card-text">Total revenue</p>
+                    <h5 class="card-title">{{ total_revenue }}</h5>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-md-3">
+            <div style="align-items: center;" class="card">
+                <div class="card-body">
+                    <p class="card-text">Total sales</p>
+                    <h5 class="card-title">{{ total_sales }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<form action="" method="post">
+    <div class="row" >
+        <div class="col-md-5">
+            {{ render_select_field(th_form.cate_report, "cate")}}
+        </div>
+        <div class="col-md-5">
+            {{ render_select_field(th_form.sub_cate_report, "sub_cate")}}
+        </div>
+        <div class="col-md-2" style="display: flex; vertical-align: middle;">
+            {{ th_form.submit(class_="btn btn-primary") }}
+        </div>
+    </div>
+</form>
+
+<form action="" method="post">
+    Sort by
+    <select name="sort_by" id="" onchange='if(this.value != 0) { this.form.submit(); }'>
+        <option value="0">Choose one</option>
+        <option value="price">Price</option>
+        <option value="stocks">Stocks</option>
+        <option value="name">Product name</option>
+        <option value="brand">Brand</option>
+    </select>
+</form>
+
+<hr>
+
+{{ pagination.links }}
+{{ pagination.info }}
+
+<form action="" method="post">
+    Products per page:
+    <select name="per_page" id="" onchange='if(this.value != 0) { this.form.submit(); }'>
+        <option value="0">Choose one</option>
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+    </select>
+</form>
+
+<table class="table table-striped table-hover stocks_listing">
+    <thead>
+        <th scope = "col">#</th>
+        <th scope = "col">Name</th>
+        <th scope = "col">Category</th>
+        <th scope = "col">Sub-category</th>
+        <th scope = "col">Brand</th>
+        <th scope = "col">Price</th>
+        <th style="text-align: center;" scope = "col">Sales</th>
+        <th scope = "col">Revenue</th>
+    </thead>
+    <tbody>
+        {% for product in list_products %}
+        <tr>
+            <td scope = "row">{{ loop.index + (page - 1) * per_page }}</td>
+            <td><a href="{{ url_for('pages.product_detail', _id = product['_id']) }}">{{ product["product_name"] | truncate(75,True) }}</a></td>
+            <td>{{ product["cate_report"] }}</td>
+            <td>{{ product["sub_cate_report"] }}</td>
+            <td>{{ product.get("brand") }}</td>
+            <td style="text-align: right;">{{ product.get("price") }}</td>
+            <td style="text-align: center;">{{ product.get("sales") }}</td>
+            <td> {{ product.get("price") *  product.get("sales")}} </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{{ pagination.links }}
+
+
+{% endblock %}

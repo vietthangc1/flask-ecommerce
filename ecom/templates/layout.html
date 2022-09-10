@@ -31,7 +31,7 @@
 </head>
 
 <body>
-  {{ topbar(num_cart_item) }}
+  {{ topbar(num_cart_item, session.get("email")) }}
   <main class="main">
     {% block main_content %} {% endblock %}
   </main>
