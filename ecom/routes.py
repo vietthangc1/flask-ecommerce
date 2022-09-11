@@ -383,11 +383,6 @@ def seller_add_products():
 def seller_stocks():
     session['source_url'] = request.path
 
-    search = False
-    q = request.args.get('q')
-    if q:
-        search = True
-
     if not session.get("per_page_stocks"):
         session["per_page_stocks"] = 10
 
@@ -396,17 +391,17 @@ def seller_stocks():
         session["sub_cate_report_filter"] = "."
 
     form = FilterStockForm()
+
+    if request.args.get("per_page"):
+        session["per_page_stocks"] = int(request.args.get("per_page"))
+    if request.args.get("cate_report"):
+        session["cate_report_filter"] = request.args.get("cate_report")
+        session["sub_cate_report_filter"] = request.args.get(
+            "sub_cate_report")
+    
     form.cate_report.default = session["cate_report_filter"]
     form.sub_cate_report.default = session["sub_cate_report_filter"]
     form.process()
-
-    if request.method == 'POST':
-        if request.form.get("per_page"):
-            session["per_page_stocks"] = int(request.form.get("per_page"))
-        if request.form.get("cate_report"):
-            session["cate_report_filter"] = request.form.get("cate_report")
-            session["sub_cate_report_filter"] = request.form.get(
-                "sub_cate_report")
 
     list_products = list(current_app.db.product.find(
         {
@@ -418,6 +413,19 @@ def seller_stocks():
                 "$regex": session["sub_cate_report_filter"],
             }
         }))
+
+    if request.args.get("sort_by"):
+        list_products = list(current_app.db.product.find(
+            {
+                "seller": session.get("email"),
+                "cate_report": {
+                    "$regex": session["cate_report_filter"],
+                },
+                "sub_cate_report": {
+                    "$regex": session["sub_cate_report_filter"],
+                }
+            }).sort(request.args.get("sort_by")))
+
 
     total = len(list_products)
 
@@ -436,7 +444,6 @@ def seller_stocks():
     pagination = Pagination(
         page=page,
         total=total,
-        search=search,
         record_name='Stocks',
         per_page=per_page,
     )

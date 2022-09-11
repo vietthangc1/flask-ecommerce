@@ -3,7 +3,7 @@
 
 {% block main_content %}
 
-<form action="" method="post">
+<form action="">
     <div class="row" >
         <div class="col-md-5">
             {{ render_select_field(th_form.cate_report, "cate")}}
@@ -17,7 +17,7 @@
     </div>
 </form>
 
-<form action="" method="post">
+<form action="">
     Sort by
     <select name="sort_by" id="" onchange='if(this.value != 0) { this.form.submit(); }'>
         <option value="0">Choose one</option>
