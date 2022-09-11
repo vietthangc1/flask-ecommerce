@@ -56,10 +56,20 @@ def category_listing(cate):
 @pages.route("/sub_category/<string:cate>", methods=['GET', 'POST'])
 def sub_category_listing(cate):
     meta = update_information()
-    list_product = list(current_app.db.product.find({
-        "sub_cate_report": cate,
-        "stocks": {"$gt": 0}}))
-        
+    if request.args.get("sort_by"):
+        list_product = list(current_app.db.product.find(
+            {
+                "sub_cate_report": cate,
+                "stocks": {"$gt": 0},
+                "price": {"$gt": 0}
+            }
+        ).sort(request.args.get("sort_by")))
+    else:
+        list_product = list(current_app.db.product.find({
+            "sub_cate_report": cate,
+            "stocks": {"$gt": 0},
+            "price": {"$gt": 0}}))
+
     total = len(list_product)
 
     page, per_page, offset = get_page_args(page_parameter='page',
@@ -73,28 +83,28 @@ def sub_category_listing(cate):
 
     pagination_products = list_product[start:end]
 
-    page = request.args.get(get_page_parameter(), type = int, default = 1)
+    page = request.args.get(get_page_parameter(), type=int, default=1)
     pagination = Pagination(
-        page = page, 
-        total = total, 
-        record_name = 'products',
-        per_page = per_page,
-        )
+        page=page,
+        total=total,
+        record_name='products',
+        per_page=per_page,
+    )
 
     if request.method == "POST":
-        if session.get("email") == None:
-            return redirect(url_for('pages.login'))
+        if request.form.get("btn"):
+            if session.get("email") == None:
+                return redirect(url_for('pages.login'))
+            _id = str(request.form.get("btn"))
+            product_dictionary = get_product_dictionary(_id)
 
-        _id = str(request.form.get("btn"))
-        product_dictionary = get_product_dictionary(_id)
+            current_user = meta["current_user"]
+            lst_cart = current_user["cart_items"]
 
-        current_user = meta["current_user"]
-        lst_cart = current_user["cart_items"]
+            quantity = 1
+            add_to_cart(_id, quantity, lst_cart, product_dictionary)
 
-        quantity = 1
-        add_to_cart(_id, quantity, lst_cart, product_dictionary)
-
-        return redirect(request.path)
+            return redirect(request.path)
 
     return render_template(
         "shop.html",
@@ -102,8 +112,8 @@ def sub_category_listing(cate):
         list_product=pagination_products,
         num_cart_item=meta["num_cart_item"],
         pagination=pagination,
-        page = page,
-        per_page = per_page,
+        page=page,
+        per_page=per_page,
     )
 
 
@@ -377,14 +387,14 @@ def seller_stocks():
     q = request.args.get('q')
     if q:
         search = True
-    
+
     if not session.get("per_page_stocks"):
         session["per_page_stocks"] = 10
-    
+
     if not session.get("cate_report_filter"):
         session["cate_report_filter"] = "."
         session["sub_cate_report_filter"] = "."
-    
+
     form = FilterStockForm()
     form.cate_report.default = session["cate_report_filter"]
     form.sub_cate_report.default = session["sub_cate_report_filter"]
@@ -395,8 +405,9 @@ def seller_stocks():
             session["per_page_stocks"] = int(request.form.get("per_page"))
         if request.form.get("cate_report"):
             session["cate_report_filter"] = request.form.get("cate_report")
-            session["sub_cate_report_filter"] = request.form.get("sub_cate_report")
-    
+            session["sub_cate_report_filter"] = request.form.get(
+                "sub_cate_report")
+
     list_products = list(current_app.db.product.find(
         {
             "seller": session.get("email"),
@@ -421,23 +432,23 @@ def seller_stocks():
 
     pagination_products = list_products[start:end]
 
-    page = request.args.get(get_page_parameter(), type = int, default = 1)
+    page = request.args.get(get_page_parameter(), type=int, default=1)
     pagination = Pagination(
-        page = page, 
-        total = total, 
-        search = search, 
-        record_name = 'Stocks',
-        per_page = per_page,
-        )
+        page=page,
+        total=total,
+        search=search,
+        record_name='Stocks',
+        per_page=per_page,
+    )
     return render_template(
         "seller_stocks.html",
         title="Stocks management",
         list_products=pagination_products,
         pagination=pagination,
-        page = page,
-        per_page = per_page,
-        th_form = form
-        )
+        page=page,
+        per_page=per_page,
+        th_form=form
+    )
 
 
 @pages.route("/seller/toggle_listed/<string:_id>", methods=['GET', 'POST'])
@@ -550,14 +561,14 @@ def seller_sales():
     q = request.args.get('q')
     if q:
         search = True
-    
+
     if not session.get("per_page_sales"):
         session["per_page_sales"] = 10
-        
+
     if not session.get("cate_report_filter"):
         session["cate_report_filter"] = "."
         session["sub_cate_report_filter"] = "."
-    
+
     form = FilterStockForm()
     form.cate_report.default = session["cate_report_filter"]
     form.sub_cate_report.default = session["sub_cate_report_filter"]
@@ -568,8 +579,9 @@ def seller_sales():
             session["per_page_sales"] = int(request.form.get("per_page"))
         if request.form.get("cate_report"):
             session["cate_report_filter"] = request.form.get("cate_report")
-            session["sub_cate_report_filter"] = request.form.get("sub_cate_report")
-    
+            session["sub_cate_report_filter"] = request.form.get(
+                "sub_cate_report")
+
     list_products = list(current_app.db.product.find(
         {
             "seller": session.get("email"),
@@ -580,8 +592,9 @@ def seller_sales():
                 "$regex": session["sub_cate_report_filter"],
             }
         }))
-    
-    total_revenue = sum([product["price"] * product['sales'] for product in list_products])
+
+    total_revenue = sum([product["price"] * product['sales']
+                        for product in list_products])
     total_sales = sum([product['sales'] for product in list_products])
 
     total = len(list_products)
@@ -597,25 +610,25 @@ def seller_sales():
 
     pagination_products = list_products[start:end]
 
-    page = request.args.get(get_page_parameter(), type = int, default = 1)
+    page = request.args.get(get_page_parameter(), type=int, default=1)
     pagination = Pagination(
-        page = page, 
-        total = total, 
-        search = search, 
-        record_name = 'Sales',
-        per_page = per_page,
-        )
+        page=page,
+        total=total,
+        search=search,
+        record_name='Sales',
+        per_page=per_page,
+    )
     return render_template(
         "seller_sales.html",
         title="Sales report",
         list_products=pagination_products,
         pagination=pagination,
-        page = page,
-        per_page = per_page,
-        th_form = form,
-        total_revenue = total_revenue,
-        total_sales = total_sales
-        )
+        page=page,
+        per_page=per_page,
+        th_form=form,
+        total_revenue=total_revenue,
+        total_sales=total_sales
+    )
 
 
 @pages.route("/seller/login", methods=['GET', 'POST'])
